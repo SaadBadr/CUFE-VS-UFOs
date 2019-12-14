@@ -4,7 +4,7 @@ import Mesh from '../common/mesh';
 import * as MeshUtils from '../common/mesh-utils';
 import Camera from '../common/camera';
 import FlyCameraController from '../common/camera-controllers/fly-camera-controller';
-import { vec3, mat4, mat3 } from 'gl-matrix';
+import { vec3, mat4,vec2,vec4, mat3 } from 'gl-matrix';
 import { Vector, Selector } from '../common/dom-utils';
 import { createElement, StatelessProps, StatelessComponent } from 'tsx-create-element';
 
@@ -17,6 +17,11 @@ export default class TexturedModelsScene extends Scene {
     textures: {[name: string]: WebGLTexture} = {};
     anisotropy_ext: EXT_texture_filter_anisotropic; // This will hold the anisotropic filtering extension
     anisotropic_filtering: number = 0; // This will hold the maximum number of samples that the anisotropic filtering is allowed to read. 1 is equivalent to isotropic filtering.
+//those varables for the rectangle i dont know why XD
+    VAO: WebGLVertexArrayObject;
+    positionVBO: WebGLBuffer;
+    colorVBO: WebGLBuffer;
+    EBO: WebGLBuffer;
 
     
     public load(): void {
@@ -306,6 +311,79 @@ export default class TexturedModelsScene extends Scene {
         if(this.anisotropy_ext) this.gl.texParameterf(this.gl.TEXTURE_2D, this.anisotropy_ext.TEXTURE_MAX_ANISOTROPY_EXT, this.anisotropic_filtering);
 
         this.meshes['moon'].draw(this.gl.TRIANGLES);
+
+        //this block is for getting the mouse position and draw a yellow rectangle in the mouse position
+                let MatPlane = mat4.clone(this.camera.ViewProjectionMatrix);
+                mat4.translate(MatPlane, MatPlane, [0, 4, 0]);
+                // Now we will check if the user clicked the box
+                // The first step is to get the mouse position in NDC (Normalized Device Coordinates)
+                const mouse: vec2 = this.game.input.MousePosition;
+                vec2.div(mouse, mouse, [this.game.canvas.width, this.game.canvas.height]);
+                vec2.add(mouse, mouse, [-0.5, -0.5]);
+                vec2.mul(mouse, mouse, [2, -2]); // In pixel coordinate y points down, while in NDC y points up so I multiply the y by -1
+                // Then we apply the inverse of the MVP matrix to get vector in the local space of the object
+                const mouseLocal: vec4 = vec4.fromValues(mouse[0], mouse[1], 0, 1);
+                vec4.transformMat4(mouseLocal, mouseLocal, mat4.invert(mat4.create(), MatPlane));
+                vec4.scale(mouseLocal, mouseLocal, 1/mouseLocal[3]);
+                // Finally, we check if the mouse in the local space is inside our rectangle
+                //draw a rectangle 
+                const positions = new Float32Array([
+                    mouseLocal[0],  mouseLocal[1], 0.0,
+                    mouseLocal[0]+0.25,  mouseLocal[1], 0.0,
+                    mouseLocal[0]+0.25,   mouseLocal[1]+0.25, 0.0,
+                    mouseLocal[0],   mouseLocal[1]+0.25, 0.0,
+                ]);
+
+                const colors = new Uint8Array([
+                    255,   255,   0, 255,
+                    255, 255,   0, 255,
+                    255,   255, 0, 255,
+                    255,   255, 0, 255,
+                ]);
+
+                // This will be the data in the Elements Buffer. There are 6 elements since we draw 2 triangles
+                // Each number in the elements buffer represent the index of the vertex needed to draw the triangle
+                // We will use Uint32 but we can other unsigned integral types
+                const elements = new Uint32Array([
+                    0, 1, 2,
+                    2, 3, 0
+                ]);
+            
+                this.VAO = this.gl.createVertexArray();
+                this.positionVBO = this.gl.createBuffer();
+                this.colorVBO = this.gl.createBuffer();
+                this.EBO = this.gl.createBuffer(); // We will create an additional buffer to store the elements
+            
+                this.gl.bindVertexArray(this.VAO);
+            
+                this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionVBO);
+                this.gl.bufferData(this.gl.ARRAY_BUFFER, positions, this.gl.STATIC_DRAW);
+
+                const positionAttrib = this.gl.getAttribLocation(this.program.program, "position");
+                this.gl.enableVertexAttribArray(positionAttrib);
+                this.gl.vertexAttribPointer(positionAttrib, 3, this.gl.FLOAT, false, 0, 0);
+
+                this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.colorVBO);
+                this.gl.bufferData(this.gl.ARRAY_BUFFER, colors, this.gl.STATIC_DRAW);
+
+                const colorAttrib = this.gl.getAttribLocation(this.program.program, "color");
+                this.gl.enableVertexAttribArray(colorAttrib);
+                this.gl.vertexAttribPointer(colorAttrib, 4, this.gl.UNSIGNED_BYTE, true, 0, 0);
+
+                this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.EBO); // Element buffers are bound to the ELEMENT_ARRAY_BUFFER target unlike the vertex buffers which are bound to ARRAY_BUFFER
+                this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, elements, this.gl.STATIC_DRAW);
+
+                // Besides storing "enableVertexAttribArray" and "vertexAttribPointer", the VAO will store "bindBuffer" if the target is "ELEMENT_ARRAY_BUFFER"
+                this.gl.bindVertexArray(null);
+
+                this.gl.useProgram(this.program.program);
+
+                this.gl.bindVertexArray(this.VAO);
+                // When using an Element buffer, we use "drawElements" instead of "drawArrays"
+                // We have to define the data type of our elements here (unlike vertices where the data type is defined in "vertexAttribPointer")
+                // the 2nd param is the number of elements to draw, and the 4th param is the index of the first vertex to start drawing from.
+                this.gl.drawElements(this.gl.TRIANGLES, 6, this.gl.UNSIGNED_INT, 0);
+                this.gl.bindVertexArray(null);
     }
     
     public end(): void {
