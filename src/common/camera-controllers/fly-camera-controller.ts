@@ -13,7 +13,9 @@ import { Key } from 'ts-key-enum';
 export default class FlyCameraController {
     camera: Camera;
     input: Input;
-
+    width: number = 50;
+    hight: number = 10;
+    minHight: number = 2;
     yaw: number = 0;
     pitch: number = 0;
 
@@ -33,28 +35,49 @@ export default class FlyCameraController {
     }
 
     public update(deltaTime: number) {
-        if(this.input.isButtonJustDown(0)){
-            this.input.requestPointerLock();
-        } else if(this.input.isButtonJustUp(0)){
-            this.input.exitPointerLock();
-        }
+    //    if(this.input.isButtonJustDown(0)){
+    //        this.input.requestPointerLock();
+    //    } else if(this.input.isButtonJustUp(0)){
+    //        this.input.exitPointerLock();
+    //    }
+//
 
-        if(this.input.isButtonDown(0)){
-            const mouseDelta = this.input.MouseDelta;
-            this.yaw += mouseDelta[0] * this.yawSensitivity;
-            this.pitch += -mouseDelta[1] * this.pitchSensitivity;
-            this.pitch = Math.min(Math.PI/2, Math.max(-Math.PI/2, this.pitch));
-            this.camera.direction = vec3.fromValues(Math.cos(this.yaw)*Math.cos(this.pitch), Math.sin(this.pitch), Math.sin(this.yaw)*Math.cos(this.pitch))
+
+        if(true){
+            //const mouseDelta = this.input.MouseDelta;
+            //this.yaw += mouseDelta[0] * this.yawSensitivity;
+            //this.pitch += -mouseDelta[1] * this.pitchSensitivity;
+            //this.pitch = Math.min(Math.PI/2, Math.max(-Math.PI/2, this.pitch));
+            //this.camera.direction = vec3.fromValues(Math.cos(this.yaw)*Math.cos(this.pitch), Math.sin(this.pitch), Math.sin(this.yaw)*Math.cos(this.pitch))
             
             const movement = vec3.create();
-            if(this.input.isKeyDown("w")) movement[2] += 1;
-            if(this.input.isKeyDown("s")) movement[2] -= 1;
+            // if(this.input.isKeyDown("w")) movement[2] += 1;
+            // if(this.input.isKeyDown("s")) movement[2] -= 1;
+            // if(this.input.isKeyDown("d")) movement[0] += 1;
+            // if(this.input.isKeyDown("a")) movement[0] -= 1;
+            // if(this.input.isKeyDown("q")) movement[1] += 1;
+            // if(this.input.isKeyDown("e")) movement[1] -= 1;
+    
+            //if(this.input.isKeyDown("q")) movement[2] += 1;
+            //if(this.input.isKeyDown("e")) movement[2] -= 1;
             if(this.input.isKeyDown("d")) movement[0] += 1;
             if(this.input.isKeyDown("a")) movement[0] -= 1;
-            if(this.input.isKeyDown("q")) movement[1] += 1;
-            if(this.input.isKeyDown("e")) movement[1] -= 1;
-            vec3.normalize(movement, movement);
+            if(this.input.isKeyDown("w")) movement[1] += 1;
+            if(this.input.isKeyDown("s")) movement[1] -= 1;
+            if(this.input.isKeyDown(" ")) return 1;
+
+            if(this.camera.position[0] > this.width && movement[0] > 0 ||  this.camera.position[0] < -this.width && movement[0] < 0)
+                movement[0] = 0;
             
+            else if(this.camera.position[1] > this.hight && movement[1] > 0 ||  this.camera.position[1] < this.minHight  && movement[1] < 0)
+            movement[1] = 0;
+
+            
+            
+
+
+            vec3.normalize(movement, movement);
+                        
             let movementSensitivity = this.input.isKeyDown(Key.Shift)?this.fastMovementSensitivity:this.movementSensitivity;
             vec3.scaleAndAdd(this.camera.position, this.camera.position, this.camera.direction, movement[2]*movementSensitivity*deltaTime);
             vec3.scaleAndAdd(this.camera.position, this.camera.position, this.camera.right, movement[0]*movementSensitivity*deltaTime);
@@ -73,5 +96,7 @@ export default class FlyCameraController {
             this.camera.perspectiveFoVy = Math.max(0.001, this.camera.perspectiveFoVy);
 
         }
+
+        return 0;
     }
 }

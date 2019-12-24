@@ -30,6 +30,7 @@ export default class Game {
 
     constructor(canvas: HTMLCanvasElement){
         this.canvas = canvas;
+        canvas.requestFullscreen;
         this.gl = this.canvas.getContext("webgl2", {
             preserveDrawingBuffer: true, // This will prevent the Browser from automatically clearing the frame buffer every frame
             alpha: true, // this will tell the browser that we want an alpha component in our frame buffer
