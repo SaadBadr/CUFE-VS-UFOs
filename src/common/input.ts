@@ -141,7 +141,7 @@ export default class Input {
 
     public get MousePosition(): vec2 { return vec2.copy(vec2.create(), this.currentMousePosition); }
     public get MouseDelta(): vec2 { return vec2.sub(vec2.create(), this.currentMousePosition, this.perviousMousePosition); }
-
+    
     public get WheelPosition(): vec3 { return vec3.copy(vec3.create(), this.currentWheelPosition); }
     public get WheelDelta(): vec3 { return vec3.sub(vec3.create(), this.currentWheelPosition, this.previousWheelPosition); }
 
